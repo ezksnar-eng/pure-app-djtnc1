@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مجسّم — استوديو 3D</title>
+<style>
+:root{--bg:#101117;--panel:#181a23;--line:#2b2e3b;--tx:#eceef5;--mut:#8f94a8;--ac:#8b7bff}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font-family:"Segoe UI",Tahoma,sans-serif;display:flex;flex-direction:column}
+header{padding:calc(10px + env(safe-area-inset-top,0px)) 16px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+header b{font-size:20px}small,.mut{color:var(--mut)}
+main{flex:1;display:grid;grid-template-columns:350px 1fr;min-height:0}
+aside{background:var(--panel);border-inline-end:1px solid var(--line);padding:14px;overflow:auto;display:flex;flex-direction:column;gap:10px}
+label{font-size:13px;color:var(--mut);display:block;margin-bottom:4px}
+input,select,textarea,button{width:100%;font:inherit;color:var(--tx);background:#101117;border:1px solid var(--line);border-radius:10px;padding:9px}
+textarea{min-height:70px;resize:vertical}
+button{cursor:pointer;background:var(--ac);color:#0d0a26;font-weight:700;border:0}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--line);font-weight:500}
+button.on{border-color:var(--ac);color:var(--ac)}button:disabled{opacity:.5}
+.row{display:flex;gap:8px}.row>*{flex:1}.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--tx)}.chk input{width:auto}
+.drop{border:2px dashed var(--line);border-radius:12px;min-height:90px;display:grid;place-items:center;text-align:center;color:var(--mut);cursor:pointer;overflow:hidden;font-size:13px;padding:4px}
+.drop img{max-width:100%;max-height:150px;display:block}
+#slots{display:grid;grid-template-columns:1fr 1fr;gap:8px}#slots .f{grid-column:1/-1}
+#stage{position:relative;min-height:0;background:#1a1c26}#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#msg{position:absolute;inset-inline:12px;bottom:calc(12px + env(safe-area-inset-bottom,0px));background:#000b;color:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;display:none}
+#bar{height:5px;background:var(--line);border-radius:3px;overflow:hidden;display:none}#bar i{display:block;height:100%;width:0;background:var(--ac);transition:width .4s}
+details{border:1px solid var(--line);border-radius:10px;padding:8px}summary{cursor:pointer;font-size:14px}
+#hist button{margin-top:6px;text-align:start;font-size:12px}
+@media(max-width:760px){main{grid-template-columns:1fr;grid-template-rows:auto 62vh}aside{border-inline-end:0;border-bottom:1px solid var(--line)}}
+@media(prefers-color-scheme:light){:root{--bg:#f2f3f8;--panel:#fff;--line:#d8dbe6;--tx:#14151c;--mut:#5f6578}input,select,textarea,.drop{background:#f2f3f8}}
+</style>
+</head>
+<body>
+<header><b>مجسّم</b><small id="bal">استوديو 3D</small></header>
+<main>
+<aside>
+  <div class="row"><button class="sec on" data-t="img">صورة</button><button class="sec" data-t="mv">4 زوايا</button><button class="sec" data-t="txt">نص</button></div>
+  <div id="slots"></div>
+  <div id="txtBox" style="display:none"><label>وصف المجسم</label><textarea id="prompt" placeholder="مثال: ساموراي بدرع أحمر، تفاصيل عالية"></textarea></div>
+  <details><summary>إعدادات الجودة</summary>
+    <label class="chk" style="margin-top:8px"><input id="pbr" type="checkbox" checked> خامات PBR</label>
+    <label class="chk"><input id="det" type="checkbox" checked> تكستشر عالي التفاصيل</label>
+    <label style="margin-top:8px">حد الوجوه (اختياري)</label><input id="faces" type="number" min="1000" placeholder="فاضي = تلقائي">
+    <label style="margin-top:8px">نسخة الموديل (اختياري)</label><input id="ver" placeholder="فاضي = الأحدث" style="direction:ltr">
+    <label style="margin-top:8px">كود الدخول</label><input id="code" type="password" style="direction:ltr">
+  </details>
+  <button id="go">ولّد المجسم</button>
+  <div id="bar"><i></i></div>
+  <div class="row"><button class="sec on" data-m="tex">ألوان</button><button class="sec" data-m="clay">طين</button><button class="sec" data-m="wire">شبكة</button></div>
+  <details id="tools"><summary>أدوات المجسم</summary>
+    <label style="margin-top:8px">تحريك (Rig + حركة)</label>
+    <div class="row"><select id="anim"><option value="idle">وقوف</option><option value="walk">مشي</option><option value="run">ركض</option><option value="jump">قفز</option><option value="slash">ضربة سيف</option><option value="shoot">إطلاق</option><option value="climb">تسلّق</option><option value="hurt">إصابة</option><option value="fall">سقوط</option><option value="turn">استدارة</option></select><button id="doAnim">حرّك</button></div>
+    <label style="margin-top:8px">تحويل الصيغة</label>
+    <div class="row"><select id="fmt"><option>OBJ</option><option>FBX</option><option>STL</option><option>USDZ</option><option>GLTF</option></select><button id="doFmt">حوّل</button></div>
+    <div class="row" style="margin-top:8px"><div><label>الخلفية</label><input id="bg" type="color" value="#1a1c26"></div><div><label>الإضاءة</label><input id="exp" type="range" min=".4" max="2.2" step=".05" value="1.05"></div></div>
+    <div class="row" style="margin-top:8px"><button class="sec" id="shot">صورة PNG</button><button class="sec" id="glb">تنزيل GLB</button><button class="sec" id="rot">دوران</button></div>
+  </details>
+  <details><summary>السجل</summary><div id="hist"></div></details>
+</aside>
+<section id="stage"><canvas id="cv"></canvas><div id="msg"></div></section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+const $=s=>document.querySelector(s),$$=s=>document.querySelectorAll(s),API="/.netlify/functions/tripo",sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const st={get(k){try{return localStorage.getItem(k)||""}catch(e){return""}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+$("#code").value=st.get("mj_code");$("#code").oninput=e=>st.set("mj_code",e.target.value);
+const msg=t=>{const m=$("#msg");m.textContent=t;m.style.display=t?"block":"none"};
+const prog=p=>{const b=$("#bar");b.style.display=p==null?"none":"block";if(p!=null)b.firstChild.style.width=p+"%"};
+const hdr=()=>({"Content-Type":"application/json","x-access-code":$("#code").value});
+async function api(url,opt){const r=await fetch(url,opt),j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||"HTTP "+r.status);return j}
+
+// ---------- viewer
+const cv=$("#cv"),R=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+R.setPixelRatio(Math.min(devicePixelRatio,2));R.outputEncoding=THREE.sRGBEncoding;R.toneMapping=THREE.ACESFilmicToneMapping;R.toneMappingExposure=1.05;
+const S=new THREE.Scene(),cam=new THREE.PerspectiveCamera(35,1,.01,100),clock=new THREE.Clock();cam.position.set(0,.4,4.4);
+const ctl=new THREE.OrbitControls(cam,cv);ctl.enableDamping=true;ctl.autoRotate=true;ctl.autoRotateSpeed=1.2;
+(function(){const e=new THREE.Scene();e.add(new THREE.Mesh(new THREE.SphereGeometry(20,24,12),new THREE.MeshBasicMaterial({color:0x4a4d5e,side:THREE.BackSide})));
+ [[0,8,0,0xffffff,12],[8,2,6,0xfff1e0,8],[-8,2,5,0xdde6ff,6],[0,3,-9,0xffffff,5]].forEach(([x,y,z,c,s])=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(s,s),new THREE.MeshBasicMaterial({color:new THREE.Color(c).multiplyScalar(3),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);e.add(m)});
+ S.environment=new THREE.PMREMGenerator(R).fromScene(e,.04).texture})();
+const sun=new THREE.DirectionalLight(0xffffff,.6);sun.position.set(3,5,4);S.add(sun);
+let cur=null,mixer=null,buf=null;
+function fit(){const r=$("#stage").getBoundingClientRect();R.setSize(r.width,r.height,false);cam.aspect=r.width/r.height;cam.updateProjectionMatrix()}
+addEventListener("resize",fit);fit();
+(function loop(){requestAnimationFrame(loop);const d=clock.getDelta();if(mixer)mixer.update(d);ctl.update();R.render(S,cam)})();
+$("#rot").onclick=()=>ctl.autoRotate=!ctl.autoRotate;
+$("#bg").oninput=e=>$("#stage").style.background=e.target.value;
+$("#exp").oninput=e=>R.toneMappingExposure=+e.target.value;
+$("#shot").onclick=()=>{R.render(S,cam);const a=document.createElement("a");a.href=cv.toDataURL("image/png");a.download="model.png";a.click()};
+$("#glb").onclick=()=>{if(!buf)return msg("ما كو مجسم للتنزيل.");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"model/gltf-binary"}));a.download="model.glb";a.click()};
+function dispose(o){o.traverse(m=>{if(m.isMesh){m.geometry.dispose();const o2=m.userData.orig||m.material;[].concat(o2).forEach(x=>{for(const k in x)if(x[k]&&x[k].isTexture)x[k].dispose();x.dispose()})}})}
+function show(g){
+  const o=g.scene;if(cur){S.remove(cur);dispose(cur)}mixer=null;
+  const b=new THREE.Box3().setFromObject(o),sz=b.getSize(new THREE.Vector3()),c=b.getCenter(new THREE.Vector3()),k=2.4/Math.max(sz.x,sz.y,sz.z,1e-4);
+  o.scale.multiplyScalar(k);o.position.sub(c.multiplyScalar(k));o.traverse(m=>{if(m.isMesh){m.userData.orig=m.material;m.frustumCulled=false}});
+  S.add(o);cur=o;ctl.target.set(0,0,0);setMode("tex");
+  if(g.animations&&g.animations.length){mixer=new THREE.AnimationMixer(o);mixer.clipAction(g.animations[0]).play()}
+}
+const clay=new THREE.MeshStandardMaterial({color:0xd9d9de,roughness:.7}),wire=new THREE.MeshBasicMaterial({color:0x8b7bff,wireframe:true});
+function setMode(m){$$("[data-m]").forEach(b=>b.classList.toggle("on",b.dataset.m===m));if(!cur)return;
+  cur.traverse(o=>{if(o.isMesh&&!o.isSkinnedMesh)o.material=m==="tex"?o.userData.orig:m==="clay"?clay:wire;else if(o.isSkinnedMesh)o.material=m==="tex"?o.userData.orig:(m==="clay"?clay:wire)})}
+$$("[data-m]").forEach(b=>b.onclick=()=>setMode(b.dataset.m));
+
+// ---------- inputs
+let tab="img";const imgs={f:null,l:null,b:null,r:null},names={f:"الأمام (مطلوب)",l:"يسار",b:"خلف",r:"يمين"};
+Object.keys(names).forEach(k=>{const d=document.createElement("div");d.className="drop "+k;d.textContent=names[k];
+  const inp=document.createElement("input");inp.type="file";inp.accept="image/*";inp.hidden=true;d.append(inp);
+  d.onclick=e=>{if(e.target!==inp)inp.click()};inp.onchange=()=>loadImg(inp.files[0],k,d);
+  d.ondragover=e=>e.preventDefault();d.ondrop=e=>{e.preventDefault();loadImg(e.dataTransfer.files[0],k,d)};$("#slots").append(d)});
+function loadImg(f,k,d){if(!f)return;const i=new Image();i.onload=()=>{
+  const s=Math.min(1,1400/Math.max(i.width,i.height)),c=document.createElement("canvas");c.width=Math.round(i.width*s);c.height=Math.round(i.height*s);
+  const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,c.width,c.height);x.drawImage(i,0,0,c.width,c.height);
+  imgs[k]=c.toDataURL("image/jpeg",.9);d.innerHTML="";const p=new Image();p.src=imgs[k];d.append(p);URL.revokeObjectURL(i.src)};i.src=URL.createObjectURL(f)}
+$$("[data-t]").forEach(b=>b.onclick=()=>{tab=b.dataset.t;$$("[data-t]").forEach(x=>x.classList.toggle("on",x===b));
+  $("#slots").style.display=tab==="txt"?"none":"grid";$("#txtBox").style.display=tab==="txt"?"block":"none";
+  $$("#slots .l,#slots .b,#slots .r").forEach(d=>d.style.display=tab==="mv"?"grid":"none")});
+$$("#slots .l,#slots .b,#slots .r").forEach(d=>d.style.display="none");
+
+// ---------- tasks
+let last=null,rigOf=null,rigId=null;
+async function up(d){const j=await api(API,{method:"POST",headers:hdr(),body:JSON.stringify({action:"upload",image:d})});return{type:j.type,file_token:j.token}}
+async function task(body){return(await api(API,{method:"POST",headers:hdr(),body:JSON.stringify({action:"task",body})})).id}
+async function wait(id,label){const t0=Date.now();let errs=0;
+  for(;;){await sleep(3000);let r;
+    try{r=await api(API+"?id="+id,{headers:hdr()});errs=0}catch(e){if(++errs>5)throw e;continue}
+    prog(Math.max(5,r.progress||0));msg(label+" "+(r.progress||0)+"%");
+    if(r.status==="success")return r;
+    if(["failed","cancelled","banned","expired","unknown"].includes(r.status))throw new Error("فشلت المهمة ("+r.status+") — جرّب صورة أوضح أو راجع رصيد Tripo");
+    if(Date.now()-t0>9*60e3)throw new Error("انتهى الوقت")}}
+async function fetchBuf(url){try{const r=await fetch(url);if(!r.ok)throw 0;return await r.arrayBuffer()}catch(e){const r=await fetch(API+"?dl="+encodeURIComponent(url),{headers:hdr()});if(!r.ok)throw new Error("تعذّر تحميل المجسم، الرابط: "+url);return await r.arrayBuffer()}}
+async function display(url){msg("تحميل المجسم…");buf=await fetchBuf(url);show(await new Promise((ok,no)=>new THREE.GLTFLoader().parse(buf,"",ok,no)))}
+async function guard(fn){const bs=$$("button");bs.forEach(b=>b.disabled=true);prog(3);
+  try{await fn();msg("تم ✔");setTimeout(()=>msg(""),2500)}catch(e){msg("فشل: "+e.message)}prog(null);bs.forEach(b=>b.disabled=false);bal()}
+function opts(){const o={};if($("#pbr").checked)o.pbr=true;if($("#det").checked)o.texture_quality="detailed";
+  const f=parseInt($("#faces").value);if(f>0)o.face_limit=f;if($("#ver").value.trim())o.model_version=$("#ver").value.trim();return o}
+$("#go").onclick=()=>guard(async()=>{
+  let body,label;
+  if(tab==="txt"){const p=$("#prompt").value.trim();if(!p)throw new Error("اكتب وصف المجسم");body={type:"text_to_model",prompt:p,...opts()};label=p.slice(0,24)}
+  else if(!imgs.f)throw new Error("ارفع صورة الأمام أول");
+  else if(tab==="img"){msg("رفع الصورة…");body={type:"image_to_model",file:await up(imgs.f),...opts()};label="صورة"}
+  else{msg("رفع الصور…");const files=[];for(const k of["f","l","b","r"])files.push(imgs[k]?await up(imgs[k]):{});body={type:"multiview_to_model",files,...opts()};label="4 زوايا"}
+  const id=await task(body),r=await wait(id,"جاري التوليد…");if(!r.url)throw new Error("ما رجع مجسم");
+  last=id;rigOf=null;addHist(id,label);await display(r.url)});
+$("#doAnim").onclick=()=>guard(async()=>{
+  if(!last)throw new Error("ولّد مجسم أول");
+  if(rigOf!==last){const id=await task({type:"animate_rig",original_model_task_id:last,out_format:"glb",spec:"tripo"});await wait(id,"تركيب الهيكل العظمي…");rigId=id;rigOf=last}
+  const id=await task({type:"animate_retarget",original_model_task_id:rigId,out_format:"glb",animation:"preset:"+$("#anim").value}),r=await wait(id,"تطبيق الحركة…");
+  if(!r.url)throw new Error("ما رجعت حركة");await display(r.url)});
+$("#doFmt").onclick=()=>guard(async()=>{
+  if(!last)throw new Error("ولّد مجسم أول");
+  const id=await task({type:"convert_model",format:$("#fmt").value,original_model_task_id:last}),r=await wait(id,"تحويل…");
+  if(!r.url)throw new Error("ما رجع ملف");msg("جاهز — جاري فتح التنزيل");open(r.url,"_blank")});
+
+// ---------- history + balance
+function hist(){try{return JSON.parse(st.get("mj_hist")||"[]")}catch(e){return[]}}
+function addHist(id,l){const h=[{id,l,t:new Date().toLocaleString("ar")},...hist().filter(x=>x.id!==id)].slice(0,15);st.set("mj_hist",JSON.stringify(h));drawHist()}
+function drawHist(){const d=$("#hist");d.innerHTML="";hist().forEach(x=>{const b=document.createElement("button");b.className="sec";b.textContent=x.l+" — "+x.t;
+  b.onclick=()=>guard(async()=>{const r=await api(API+"?id="+x.id,{headers:hdr()});if(!r.url)throw new Error("المجسم غير متاح");last=x.id;rigOf=null;await display(r.url)});d.append(b)});
+  if(!d.children.length)d.innerHTML='<small>فاضي</small>'}
+async function bal(){try{const r=await api(API+"?balance=1",{headers:hdr()});if(r.balance!=null)$("#bal").textContent="الرصيد: "+r.balance}catch(e){}}
+drawHist();bal();
+</script>
+</body>
+</html>
